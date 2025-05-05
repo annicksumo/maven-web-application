@@ -1,0 +1,72 @@
+pipeline {
+  agent any
+
+  tools {
+    maven 'maven3.9.1'
+  }
+
+  stages {
+    stage('1clone') {
+      steps {
+        git "https://github.com/annicksumo/maven-web-application.git"
+      }
+    }
+
+    stage('2Testbuild') {
+      steps {
+        sh "mvn clean package"
+      }
+    }
+
+    stage('3CodeQualityAnalysis') {
+      steps {
+        sh "mvn sonar:sonar"
+      }
+    }
+
+    stage('4UploadArtifacts') {
+      steps {
+        sh "mvn deploy"
+      }
+    }
+
+    stage('5Deploy') {
+      steps {
+        deploy adapters: [tomcat9(credentialsId: 'tomcat-credentials', path: '', url: 'http://184.73.138.210:8008/')], contextPath: null, war: 'target/*.war'
+      }
+    }
+  }
+
+  post {
+    always {
+      emailext(
+        body: '''Great Job
+
+Annick Sumo''',
+        recipientProviders: [buildUser(), developers()],
+        subject: 'Build finished (success or fail)',
+        to: 'adoguen2000@yahoo.fr'
+      )
+    }
+
+    success {
+      emailext(
+        body: '''Great Job
+
+Annick Sumo''',
+        recipientProviders: [buildUser(), developers()],
+        subject: 'Build Success',
+        to: 'adoguen2000@yahoo.fr'
+      )
+    }
+
+    failure {
+      emailext(
+        body: 'Please review this job',
+        recipientProviders: [buildUser(), developers()],
+        subject: 'Build Failure',
+        to: 'adoguen2000@yahoo.fr'
+      )
+    }
+  }
+}
